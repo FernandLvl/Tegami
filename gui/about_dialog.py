@@ -66,6 +66,7 @@ class AboutDialog(QDialog):
 
     def launch_mini_game(self):
         game = MiniGameDialog(self)
+        game.setAttribute(Qt.WA_DeleteOnClose)
         game.exec()
 
 class MiniGameDialog(QDialog):
@@ -153,8 +154,10 @@ class MiniGameDialog(QDialog):
         self.idle_sounds = [os.path.join(SOUND_PATH, f"di{i}.wav") for i in range(1, 7)]
         self.bubble_sounds = [os.path.join(SOUND_PATH, f"bbbl{i}.wav") for i in range(1, 7)]
 
-        self.sound_effect = QSoundEffect(self)
-        self.sound_effect.setVolume(0.5)
+        self.sound_pool = [QSoundEffect(self) for _ in range(5)]
+        self.sound_pool_index = 0
+        for s in self.sound_pool:
+            s.setVolume(0.5)
 
         # Timer para sonidos idle
         self.idle_timer = QTimer(self)
@@ -211,23 +214,13 @@ class MiniGameDialog(QDialog):
         item.show()
 
     def play_sound(self, sound_list):
-        """Reproduce un sonido aleatorio de la lista dada, permitiendo superposición."""
+        """Reproduce un sonido aleatorio usando un pool de QSoundEffect para evitar fugas."""
         sound_file = random.choice(sound_list)
-        effect = QSoundEffect(self)
+        effect = self.sound_pool[self.sound_pool_index]
+        self.sound_pool_index = (self.sound_pool_index + 1) % len(self.sound_pool)
+        effect.stop()
         effect.setSource(QUrl.fromLocalFile(sound_file))
-        effect.setVolume(0.5)
         effect.play()
-        # Mantener referencia para evitar que se destruya antes de tiempo
-        if not hasattr(self, "_active_sounds"):
-            self._active_sounds = []
-        self._active_sounds.append(effect)
-        # Limpiar referencia cuando termine, sin error si ya no está
-        def cleanup():
-            try:
-                self._active_sounds.remove(effect)
-            except ValueError:
-                pass
-        effect.playingChanged.connect(lambda: cleanup() if not effect.isPlaying() else None)
 
     def play_idle_sound(self):
         self.play_sound(self.idle_sounds)
@@ -257,6 +250,7 @@ class MiniGameDialog(QDialog):
                     if item.text() in self.fish_emojis:
                         self.lives -= 1
                         self.play_sound(self.hurt_sounds)
+                item.hide()
                 item.deleteLater()
                 self.falling_items.remove(item)
 
@@ -316,12 +310,7 @@ class MiniGameDialog(QDialog):
         msg.exec()
 
     def restart_game(self):
-        # Elimina todos los labels de los objetos en caída
-        for item in getattr(self, "falling_items", []):
-            item.deleteLater()
-        self.falling_items.clear()
-        # Elimina todas las burbujas visuales si usas labels para ellas (opcional)
-        self.bubbles.clear()
+        self.cleanup()
         # Reinicia los valores y timers del minijuego
         self.score = 0
         self.lives = 10
@@ -408,21 +397,33 @@ class MiniGameDialog(QDialog):
         super().paintEvent(event)
 
     def closeEvent(self, event):
-        # Detén todos los timers y sonidos aquí
-        if hasattr(self, "timer"):
-            self.timer.stop()
-        if hasattr(self, "spawn_timer"):
-            self.spawn_timer.stop()
-        if hasattr(self, "idle_timer"):
-            self.idle_timer.stop()
-        if hasattr(self, "gradient_timer"):
-            self.gradient_timer.stop()
-        if hasattr(self, "bubble_sound_timer"):
-            self.bubble_sound_timer.stop()
-        # Limpia referencias a sonidos activos
-        if hasattr(self, "_active_sounds"):
-            self._active_sounds.clear()
+        self.cleanup()
         event.accept()
+
+    def cleanup(self):
+        """Detiene timers, elimina objetos visuales y limpia recursos de sonido."""
+        self.timer.stop()
+        self.spawn_timer.stop()
+        self.level_timer.stop()
+        self.idle_timer.stop()
+        self.bubble_sound_timer.stop()
+        self.gradient_timer.stop()
+        if hasattr(self, "_slowdown_timer"):
+            self._slowdown_timer.stop()
+        if hasattr(self, "_slowdown_counter_timer"):
+            self._slowdown_counter_timer.stop()
+        # elimina ítems y burbujas
+        for item in self.falling_items:
+            item.hide()
+            item.deleteLater()
+        self.falling_items.clear()
+        self.bubbles.clear()
+        # limpia efectos de sonido antiguos si existieran
+        if hasattr(self, "_active_sounds"):
+            for effect in self._active_sounds:
+                effect.stop()
+                effect.deleteLater()
+            self._active_sounds.clear()
 
     def apply_powerup(self, emoji):
         if emoji == "❤️":
