@@ -1,0 +1,17 @@
+{
+    "theme": "dark",
+    "language": "es",
+    "download_path": "downloads",
+    "database_path": "data/gallery.db",
+    "api_user_agent": "tag-gallery-app/1.0 (by tu_usuario)",
+    "max_downloads_per_tag": 50,
+    "window_size": {
+        "width": 1200,
+        "height": 600
+    },
+    "show_tag_dock": true,
+    "show_console_dock": false,
+    "start_maximized": false,
+    "card_size": 170,
+    "game_high_score": 67
+}

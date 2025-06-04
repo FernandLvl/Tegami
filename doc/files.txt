@@ -1,0 +1,60 @@
+Tegami/
+│
+├── .gitignore                  # archivos o carpetas que Git debe ignorar (por ejemplo, .venv, __pycache__)
+├── main.py                    # archivo principal que arranca la aplicación (carga tema, idioma y la ventana principal)
+├── README.md                  # descripción del proyecto, instrucciones y presentación en GitHub
+├── requirements.txt           # lista de dependencias necesarias para ejecutar el proyecto
+├── test_pyside.py             # script de prueba temporal para UI (posible eliminación futura si no se usa)
+│
+├── .venv/                     # entorno virtual de Python (archivos del entorno, no tocar)
+│
+├── config/                    # configuración principal del proyecto
+│   ├── config.py              # funciones para cargar configuraciones desde JSON
+│   ├── default_config.json    # archivo base con configuraciones como idioma, tema, rutas y límites
+│   └── __pycache__/           # caché de Python (generado automáticamente, puedes ignorarlo)
+│
+├── data/                      # carpeta para almacenamiento de datos locales
+│   └── gallery.db             # base de datos SQLite (aún sin usar, será clave para almacenar imágenes y tags)
+│
+├── database/                  # lógica para interactuar con la base de datos
+│   ├── db_init.py             # script para inicializar la estructura de la base de datos
+│   └── db_manager.py          # clase o funciones para manejar consultas a la base de datos (añadir, buscar, etc.)
+│
+├── doc/                       # documentación del proyecto
+│   ├── database.txt           # descripción de la estructura de la base de datos
+│   └── files.txt              # descripción de la estructura de carpetas y archivos del proyecto
+│
+├── downloader/                # lógica para descargar imágenes y metadatos desde APIs (e621, etc.)
+│   └── fetch.py               # funciones que se conectarán a las APIs para obtener recursos
+│
+├── downloads/                 # carpeta para almacenamiento de imágenes descargadas
+│   ├── originals/             # imágenes originales descargadas (sin procesar)
+│   ├── thumbnails/            # miniaturas generadas de las imágenes originales
+│
+├── gui/                       # interfaz gráfica de usuario (PySide6)
+│   ├── main_window.py         # clase principal de la ventana, conecta toda la interfaz
+│   ├── image_viewer.py        # posible visor detallado de imágenes (aún sin uso definido)
+│   ├── tag_filter.py          # widget para filtrar por etiquetas (aún sin uso definido)
+│   ├── ui/                    # archivos .ui (diseño visual hecho con Qt Designer)
+│   │   └── main_window.ui     # diseño visual de la ventana principal
+│   └── __pycache__/           # caché de Python para la carpeta GUI
+│
+├── lang/                      # archivos de idioma para internacionalización (i18n)
+│   ├── en.json                # idioma inglés
+│   └── es.json                # idioma español
+│
+├── resources/                 # recursos adicionales como íconos y estilos extra
+│   ├── style.qss              # hoja de estilos opcional para personalización de la interfaz
+│   └── icons/                 # íconos para botones, menús, etc. (vacío por ahora)
+│
+├── tests/                     # scripts para pruebas automáticas del sistema
+│   └── test_database.py       # prueba unitaria para la base de datos
+│
+├── themes/                    # temas visuales personalizados en formato .qss
+│   ├── dark.qss               # tema oscuro
+│   └── light.qss              # tema claro
+│
+└── utils/                     # utilidades generales del sistema
+    ├── i18n.py                # funciones para cargar los archivos de idioma según la configuración
+    ├── theme.py               # funciones para aplicar los temas visuales definidos
+    └── __pycache__/           # caché de Python para los módulos de utilidades

@@ -1,0 +1,47 @@
+# entorno virtual
+.venv/
+__pycache__/
+*.pyc
+
+# archivos de sistema
+.DS_Store
+Thumbs.db
+
+# archivos generados
+*.log
+*.db
+*.sqlite
+*.sqlite3
+downloads/originals/**
+downloads/preview/**
+downloads/thumbnails/**
+
+# configuraciones de IDE
+.vscode/
+.idea/
+
+# archivos de caché
+.cache/
+
+# archivos de sonido
+bbbl1.wav
+bbbl2.wav
+bbbl3.wav
+bbbl4.wav
+bbbl5.wav
+bbbl6.wav
+
+dd1.wav
+dd2.wav
+de1.wav
+de2.wav
+de3.wav
+dh1.wav
+dh2.wav
+dh3.wav
+di1.wav
+di2.wav
+di3.wav
+di4.wav
+di5.wav
+di6.wav

@@ -1,0 +1,46 @@
+{
+    "title_main_window": "Galería de Referencias",
+    "button_download": "Descargar",
+    "label_tags": "Etiquetas",
+
+    "menu_file": "Archivo",
+    "menu_open": "Abrir...",
+    "menu_exit": "Salir",
+
+    "menu_edit": "Editar",
+    "menu_cut": "Cortar",
+    "menu_copy": "Copiar",
+    "menu_paste": "Pegar",
+
+    "menu_view": "Ver",
+
+    "menu_window": "Ventana",
+    "menu_show_tags": "Mostrar panel de etiquetas",
+    "menu_show_console": "Mostrar consola",
+
+    "menu_help": "Ayuda",
+    "menu_about": "Acerca de",
+
+    "status_ready": "Lista para usar",
+    "tooltip_list_view": "Ver en lista",
+    "tooltip_grid_view": "Ver en cuadrícula",
+    "gallery_placeholder": "Aquí se mostrará la galería de imágenes",
+    "dock_console": "Consola",
+
+    "dock_tags": "Etiquetas",
+    "search_tags": "Buscar etiquetas",
+
+    "about_dev_info": "Desarrollado por Fernand Lovelace\ncon cariño y caos digital ♡",
+    "about_version": "Versión 0.1 (En desarrollo)",
+    "about_button_close": "Cerrar",
+    
+    "mini_game_title": "Caza de peces 🐬🐟",
+    "game_score_label": "🎣x {score}",
+    "game_lives_label": "❤️x {lives}",
+    "game_high_score_label": "Puntaje máximo: {high_score}",
+    "game_new_record": "¡Nuevo récord!",
+    "game_over": "Fin del juego",
+    "game_over_message": "🐾 Tu puntuación: {score}\n¡Vuelve pronto!",
+    "game_button_retry": "Reintentar",
+    "game_button_close": "Cerrar"
+}

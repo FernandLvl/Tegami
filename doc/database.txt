@@ -1,0 +1,71 @@
+# Esquema de base de datos: gallery.db
+# Generado por database/db_init.py
+
+== Tabla: resources ==
+- id (INTEGER, PK): identificador interno local
+- booru_id (INTEGER): id en e621/r34, NULL para archivos locales
+- source (TEXT, NOT NULL): origen ("e621", "r34", "local")
+- file_path (TEXT, NOT NULL): ruta del archivo en disco
+- preview_path (TEXT): ruta de vista previa (si aplica)
+- file_type (TEXT, NOT NULL): tipo de archivo (jpg, mp4, etc)
+- mime_type (TEXT): tipo MIME (image/jpeg, video/mp4, etc)
+- width (INTEGER): ancho del archivo (si aplica)
+- height (INTEGER): alto del archivo (si aplica)
+- duration (REAL): duración en segundos (si es video)
+- rating (TEXT): clasificación de contenido (safe, questionable, explicit)
+- booru_status (TEXT): estado (ej. active, deleted, local)
+- md5 (TEXT, UNIQUE): hash md5 del archivo
+- created_at (TEXT): fecha de creación original
+- downloaded_at (TEXT, NOT NULL): fecha en que se agregó a la galería
+- tags_updated_at (TEXT): última vez que se actualizaron los tags
+
+== Tabla: resource_sources ==
+- id (INTEGER, PK AUTOINCREMENT)
+- resource_id (INTEGER, FK → resources.id): recurso relacionado
+- url (TEXT, NOT NULL): url del recurso original
+- source_name (TEXT): nombre del sitio o fuente
+
+== Tabla: resource_meta ==
+- id (INTEGER, PK AUTOINCREMENT)
+- resource_id (INTEGER, FK UNIQUE → resources.id): recurso relacionado
+- is_favorite (BOOLEAN): marcado como favorito
+- is_hidden (BOOLEAN): oculto en la galería
+- user_rating (INTEGER): puntuación del usuario (1 a 5)
+- notes (TEXT): notas personales
+- view_count (INTEGER): número de vistas
+- last_viewed (TEXT): última vez visto
+- pinned (BOOLEAN): si está anclado en la galería
+
+== Tabla: user_collections ==
+- id (INTEGER, PK AUTOINCREMENT)
+- name (TEXT, UNIQUE, NOT NULL): nombre de la colección del usuario
+- description (TEXT): descripción opcional
+- created_at (TEXT): fecha de creación
+
+== Tabla: resource_collections ==
+(relación muchos-a-muchos entre resources y user_collections)
+- resource_id (INTEGER, PK compuesto, FK → resources.id)
+- collection_id (INTEGER, PK compuesto, FK → user_collections.id)
+
+== Tabla: shared_collections ==
+- id (INTEGER, PK AUTOINCREMENT)
+- name (TEXT, NOT NULL): nombre de colección pública o externa
+- description (TEXT): descripción
+- created_at (TEXT): fecha de creación
+
+== Tabla: shared_collection_items ==
+- collection_id (INTEGER, PK compuesto, FK → shared_collections.id)
+- booru_id (INTEGER, PK compuesto): id del recurso en su booru original
+- source (TEXT, PK compuesto): fuente del recurso (e621, r34)
+
+== Tabla: tags ==
+- id (INTEGER, PK AUTOINCREMENT)
+- name (TEXT, NOT NULL): nombre del tag
+- type (TEXT): tipo de tag (general, artist, species, etc)
+- source (TEXT, NOT NULL): fuente del tag (e621, r34)
+- UNIQUE(name, source): evita duplicados entre boorus distintos
+
+== Tabla: resource_tags ==
+(relación muchos-a-muchos entre resources y tags)
+- resource_id (INTEGER, PK compuesto, FK → resources.id)
+- tag_id (INTEGER, PK compuesto, FK → tags.id)
