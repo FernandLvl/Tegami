@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QSizePolicy, QGridLayout
 )
 from PySide6.QtGui import QPixmap
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QSize
 import os
 
 def clear_layout(layout):

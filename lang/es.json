@@ -34,13 +34,13 @@
     "about_version": "Versión 0.1 (En desarrollo)",
     "about_button_close": "Cerrar",
     
-    "mini_game_title": "Caza de peces 🐬🐟",
-    "game_score_label": "🎣x {score}",
-    "game_lives_label": "❤️x {lives}",
-    "game_high_score_label": "Puntaje máximo: {high_score}",
-    "game_new_record": "¡Nuevo récord!",
-    "game_over": "Fin del juego",
-    "game_over_message": "🐾 Tu puntuación: {score}\n¡Vuelve pronto!",
-    "game_button_retry": "Reintentar",
-    "game_button_close": "Cerrar"
+    "mini_game_title": "🐬🎮✨",
+    "game_score_label": "🎣 x {score}",
+    "game_lives_label": "❤️ x {lives}",
+    "game_high_score_label": "🏆 Máximo: {high_score}",
+    "game_new_record": "🌟 ¡Nuevo récord!",
+    "game_over": "💀 Fin del juego",
+    "game_over_message": "🐾 Tu puntuación: {score}\n¡Gracias por jugar!",
+    "game_button_retry": "🔁 Reintentar",
+    "game_button_close": "❌ Salir"
 }

@@ -1,15 +1,16 @@
+import json
 from PySide6.QtWidgets import (
     QMainWindow, QTextEdit, QDockWidget, QListWidget,
     QLabel, QStatusBar, QMenuBar, QMenu, QWidget, QVBoxLayout, QScrollArea, QHBoxLayout,
     QPushButton, QSizePolicy
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QAction
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import QSize
 from PySide6.QtSvg import QSvgRenderer
 from utils.i18n import tr
-from config.config import get_setting, save_setting  # ← Agrega este import
+from config.config import get_setting  # ← Solo get_setting, save_setting se usa solo en _save_config
 from .central_widget import create_grid_view, create_list_view
 import os
 from PySide6.QtGui import QPixmap, QPainter, QIcon
@@ -19,41 +20,63 @@ import sqlite3
 from database.db_manager import DBManager
 from gui.tag_dock import TagDock
 from gui.about_dialog import AboutDialog
+from boorus.e621_sync import e621_save_json
+
+
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+ICON_PATH = os.path.join(CURRENT_DIR, "..", "resources", "icons")
+SOUND_PATH = os.path.join(CURRENT_DIR, "..", "resources", "sounds")
+DB_PATH = os.path.join(CURRENT_DIR, "..", "data", "gallery.db")
+
+
 
 class MainWindow(QMainWindow):
 
+    # --------------------
+    # inicialización
+    # --------------------
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Tegami v0.1")
 
-        # Cargar tamaño de ventana desde la configuración
-        window_size = get_setting("window_size")
-        if window_size:
-            self.resize(window_size.get("width", 1200), window_size.get("height", 600))
-        else:
-            self.resize(1200, 600)
-
-        # Maximizar si está configurado
-        if get_setting("start_maximized"):
-            self.showMaximized()
-
         self.tag_dock = None
         self.console_dock = None
+        self._is_closing = False
 
         # Instancia el gestor de base de datos
-        self.db = DBManager("data/gallery.db")
+        self.db = DBManager(DB_PATH)
         self.previews = self.db.get_all_previews()
 
         # Tamaño de tarjeta configurable
-        self.card_size = get_setting("card_size") or 150
+        self.card_size = self._get_setting("card_size") or 150
 
         # orden correcto de creación
         self._create_status_bar()
         self._create_central_widget()
         self._create_dock_widgets()      # ← primero los docks
         self._create_menu_bar()          # ← luego el menú
-        
 
+        # restaurar geometría y estado si existen
+        geometry = self._get_setting("window_geometry")
+        state = self._get_setting("window_state")
+
+        if geometry:
+            from PySide6.QtCore import QByteArray
+            self.restoreGeometry(QByteArray.fromBase64(geometry.encode()))
+        else:
+            self.resize(1200, 600)
+
+        if state:
+            self.restoreState(QByteArray.fromBase64(state.encode()))
+        
+        self.test_guardar_e621()
+
+
+
+    # --------------------
+    # creación de interfaz
+    # --------------------
     def _create_menu_bar(self):
         menu_bar = self.menuBar()
 
@@ -84,33 +107,63 @@ class MainWindow(QMainWindow):
         # menú Ventana
         window_menu = menu_bar.addMenu(tr("menu_window"))
 
-        # acción para mostrar/ocultar el dock de tags
-        toggle_tag_dock_action = QAction(tr("menu_show_tags"), self, checkable=True)
-        toggle_tag_dock_action.setChecked(True)
-        toggle_tag_dock_action.triggered.connect(
+        self.toggle_tag_dock_action = QAction(tr("menu_show_tags"), self, checkable=True)
+        self.toggle_tag_dock_action.setChecked(True)
+        self.toggle_tag_dock_action.toggled.connect(
             lambda checked: self.tag_dock.setVisible(checked)
         )
 
-        # acción para mostrar/ocultar el dock de consola
-        toggle_console_dock_action = QAction(tr("menu_show_console"), self, checkable=True)
-        toggle_console_dock_action.setChecked(True)
-        toggle_console_dock_action.triggered.connect(
+        self.toggle_console_dock_action = QAction(tr("menu_show_console"), self, checkable=True)
+        self.toggle_console_dock_action.setChecked(True)
+        self.toggle_console_dock_action.toggled.connect(
             lambda checked: self.console_dock.setVisible(checked)
         )
 
         # sincronizar estado si docks se cierran manualmente
-        self.tag_dock.visibilityChanged.connect(toggle_tag_dock_action.setChecked)
-        self.console_dock.visibilityChanged.connect(toggle_console_dock_action.setChecked)
+        self.tag_dock.visibilityChanged.connect(self.toggle_tag_dock_action.setChecked)
+        self.console_dock.visibilityChanged.connect(self.toggle_console_dock_action.setChecked)
 
-        # añadir al menú
-        window_menu.addAction(toggle_tag_dock_action)
-        window_menu.addAction(toggle_console_dock_action)
+        window_menu.addAction(self.toggle_tag_dock_action)
+        window_menu.addAction(self.toggle_console_dock_action)
 
         # menú Ayuda
         ayuda_menu = menu_bar.addMenu(tr("menu_help"))
         acerca_action = QAction(tr("menu_about"), self)
         acerca_action.triggered.connect(self.show_about_dialog)
         ayuda_menu.addAction(acerca_action)
+
+    def _create_dock_widgets(self):
+        # dock lateral izquierdo para filtros por tag
+        tags = self.db.get_all_tags()
+        self.tag_dock = TagDock(tags, self)
+        self.tag_dock.setObjectName("TagDock")
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.tag_dock)
+        self.tag_dock.tags_selected.connect(self.on_tags_selected)
+
+        # dock inferior para mensajes o consola
+        self.console_dock = QDockWidget(tr("dock_console"), self)
+        self.console_dock.setObjectName("ConsoleDock")
+        console_text = QTextEdit()
+        console_text.setReadOnly(True)
+        console_text.setPlainText(tr("console_placeholder"))
+        self.console_dock.setWidget(console_text)
+        self.console_dock.setAllowedAreas(Qt.BottomDockWidgetArea)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.console_dock)
+
+        # Aplicar visibilidad de los docks según configuración
+        # show_tag_dock = self._get_setting("show_tag_dock")
+        # show_console_dock = self._get_setting("show_console_dock")
+        # if self.tag_dock is not None:
+        #     self.tag_dock.setVisible(show_tag_dock if show_tag_dock is not None else True)
+        #     self.tag_dock.visibilityChanged.connect(
+        #         lambda visible: self._on_dock_visibility_change("show_tag_dock", visible)
+        #     )
+
+        # if self.console_dock is not None:
+        #     self.console_dock.setVisible(show_console_dock if show_console_dock is not None else True)
+        #     self.console_dock.visibilityChanged.connect(
+        #         lambda visible: self._on_dock_visibility_change("show_console_dock", visible)
+        #     )
 
     def _create_status_bar(self):
         self.status = QStatusBar()
@@ -123,8 +176,7 @@ class MainWindow(QMainWindow):
         button_layout.setContentsMargins(0, 0, 0, 0)
 
         # Rutas absolutas para los iconos
-        CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-        ICON_PATH = os.path.join(CURRENT_DIR, "..", "resources", "icons")
+        # (Ya están definidas como constantes arriba)
 
         # botón para vista de lista
         self.list_view_btn = QPushButton()
@@ -154,10 +206,6 @@ class MainWindow(QMainWindow):
         # añadir el contenedor de botones al status bar
         self.status.addPermanentWidget(button_container)
 
-    def _on_card_size_change(self, new_size):
-        self.current_card_size = new_size
-        save_setting("card_size", new_size)
-
     def _create_central_widget(self):
         self.current_view = "grid"
         self.current_card_size = self.card_size
@@ -168,30 +216,11 @@ class MainWindow(QMainWindow):
         )
         self.setCentralWidget(gallery_widget)
 
-    def _create_dock_widgets(self):
-        # dock lateral izquierdo para filtros por tag
-        tags = self.db.get_all_tags()
-        self.tag_dock = TagDock(tags, self)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.tag_dock)
-        self.tag_dock.tags_selected.connect(self.on_tags_selected)
 
-        # dock inferior para mensajes o consola
-        self.console_dock = QDockWidget(tr("dock_console"), self)
-        console_text = QTextEdit()
-        console_text.setReadOnly(True)
-        console_text.setPlainText(tr("console_placeholder"))
-        self.console_dock.setWidget(console_text)
-        self.console_dock.setAllowedAreas(Qt.BottomDockWidgetArea)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.console_dock)
 
-        # Aplicar visibilidad de los docks según configuración
-        show_tag_dock = get_setting("show_tag_dock")
-        show_console_dock = get_setting("show_console_dock")
-        if self.tag_dock is not None:
-            self.tag_dock.setVisible(show_tag_dock if show_tag_dock is not None else True)
-        if self.console_dock is not None:
-            self.console_dock.setVisible(show_console_dock if show_console_dock is not None else True)
-
+    # --------------------
+    # slots / callbacks
+    # --------------------
     def on_tags_selected(self, selected_tags):
         # Si selected_tags es una lista de diccionarios, extrae los nombres
         tag_names = [tag['name'] if isinstance(tag, dict) else tag for tag in selected_tags]
@@ -236,3 +265,59 @@ class MainWindow(QMainWindow):
     def show_about_dialog(self):
         dlg = AboutDialog(self)
         dlg.exec()
+
+
+
+    # --------------------
+    # lógica interna / utilidades
+    # --------------------
+
+    def closeEvent(self, event):
+        # guardar geometría y estado de la ventana
+        self._save_config("window_geometry", self.saveGeometry().toBase64().data().decode())
+        self._save_config("window_state", self.saveState().toBase64().data().decode())
+        self._save_config("start_maximized", self.isMaximized())
+        self._is_closing = True
+        super().closeEvent(event)
+
+    def _toggle_dock(self, dock, config_key, checked):
+        if dock is not None:
+            dock.setVisible(checked)
+            self._save_config(config_key, checked)
+    
+    def _on_card_size_change(self, new_size):
+        self.current_card_size = new_size
+        self._save_config("card_size", new_size)
+
+    def _save_config(self, key, value):
+        if key is None:
+            return  # evita errores tontos
+        from config.config import save_setting
+        save_setting(key, value)
+
+    def _get_setting(self, key):
+        from config.config import get_setting
+        return get_setting(key)
+
+    def resizeEvent(self, event):
+        # Solo guarda el tamaño si la ventana NO está maximizada
+        if not self.isMaximized():
+            size = {"width": self.width(), "height": self.height()}
+            self._save_config("window_size", size)
+            self._save_config("start_maximized", False)
+        super().resizeEvent(event)
+
+
+
+    def test_guardar_e621(self):
+            json_path = "tests/e621.json"
+            db_path = "data/gallery.db"  # ajusta según tu ruta real
+
+            # cargar json
+            with open(json_path, "r", encoding="utf-8") as f:
+                json_data = json.load(f)
+
+            # guardar en la base de datos
+            e621_save_json(json_data, db_path)
+
+            print("Datos guardados correctamente desde e621.json")

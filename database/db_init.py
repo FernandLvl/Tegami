@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS resources (
     file_path TEXT NOT NULL,
     preview_path TEXT,
     file_type TEXT NOT NULL,
-    mime_type TEXT,
+    size INTEGER,
     width INTEGER,
     height INTEGER,
     duration REAL,

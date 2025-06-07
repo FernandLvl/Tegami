@@ -99,25 +99,37 @@ class MiniGameDialog(QDialog):
         # ------------------------------------------
 
         self.fish_emojis = [
-                "🐟",  # pez común
-                "🐠",  # pez tropical
-                "🐡",  # pez globo
-                "🦐",  # camarón
-                "🦑",  # calamar
-                "🦞",  # langosta
-                "🦀",  # cangrejo
-                "🐙",  # pulpo
-                "🪼",  # medusa
+                "🐟",  
+                "🐠",  
+                "🐡",  
+                "🦐",  
+                "🦑",  
+                "🦞",  
+                "🦀",  
+                "🐙",  
+                "🪼", 
             ]
         self.bad_emojis = [
-                "💣",  # bomba
-                "🪸",  # coral venenoso
-                "🧊",  # hielo
-                "🪨",  # roca
-                "☠️",  # veneno/muerte
-                "🦴",  # hueso
-                "🪝",  # anzuelo metálico
+                "💣",
+                "🪨",
+                "🧊",
+                "☠️",
+                "🦴",
+                "🪝",
+                "⚓",
+                "🛟",
+                "🐚",
+                "🪸",
+                "🧽",
+                "🥽",
             ]
+        
+        self.legendary_emojis = [
+                "🧜‍♀️",  
+                "🐉",  
+                "👑",  
+            ]
+
 
         self.powerup_emojis = ["❤️", "🕑"]
         self.powerup_chance = 0.08    # 8% de probabilidad de powerup por item generado
@@ -182,6 +194,9 @@ class MiniGameDialog(QDialog):
 
         self.setFocusPolicy(Qt.StrongFocus)
 
+        self.last_mouse_zone = self.dolphin_pos  # Para saber en qué zona estaba el delfín
+        self.mouse_move_enabled = True           # Controla si el mouse puede mover el delfín
+
     def increase_difficulty(self):
         """Aumenta la dificultad del juego reduciendo los intervalos de los temporizadores."""
         self.level += 1
@@ -197,9 +212,15 @@ class MiniGameDialog(QDialog):
         if random.random() < self.powerup_chance:
             emoji = random.choice(self.powerup_emojis)
             is_powerup = True
+        # Legendary: probabilidad aún menor (por ejemplo, 2%)
+        elif random.random() < 0.03:
+            emoji = random.choice(self.legendary_emojis)
+            is_powerup = False
+            is_legendary = True
         else:
             emoji = random.choice(self.fish_emojis + self.bad_emojis * 1)
             is_powerup = False
+            is_legendary = False
 
         item = QLabel(emoji, self)
         item.setFont(QFont("Arial", 24))
@@ -210,6 +231,7 @@ class MiniGameDialog(QDialog):
         item.move(x, 0)
         item.pos_index = pos
         item.is_powerup = is_powerup
+        item.is_legendary = is_legendary if 'is_legendary' in locals() else False
         self.falling_items.append(item)
         item.show()
 
@@ -235,21 +257,24 @@ class MiniGameDialog(QDialog):
     def update_game(self):
         for item in self.falling_items[:]:
             item.move(item.x(), item.y() + 20)
-
             if item.y() >= 340:
                 if item.pos_index == self.dolphin_pos:
                     if getattr(item, "is_powerup", False):
                         self.apply_powerup(item.text())
+                        self.show_effect(item.text(), color="#aef")
+                    elif getattr(item, "is_legendary", False):
+                        self.score += 5
+                        self.play_sound(self.eat_sounds)
+                        self.show_effect("+5", color="#ffd700")  # dorado
                     elif item.text() in self.fish_emojis:
                         self.score += 1
                         self.play_sound(self.eat_sounds)
+                        self.show_effect("+1", color="#6f6")
                     else:
                         self.lives -= 1
                         self.play_sound(self.hurt_sounds)
-                else:
-                    if item.text() in self.fish_emojis:
-                        self.lives -= 1
-                        self.play_sound(self.hurt_sounds)
+                        self.show_effect("✖", color="#f44")
+                        self.shake_window()
                 item.hide()
                 item.deleteLater()
                 self.falling_items.remove(item)
@@ -328,14 +353,24 @@ class MiniGameDialog(QDialog):
         self.level_timer.start(5000)
         self.idle_timer.start(random.randint(3000, 5000))
         self.bubble_sound_timer.start(random.randint(1200, 2500))
+        self.gradient_timer.start(40)  # <--- ¡Asegúrate de reiniciar este timer!
 
     def keyPressEvent(self, event):
-        # Permite mover con flechas o con las teclas 'a' (izquierda) y 'd' (derecha)
+        # Permite mover con flechas, teclas 'a'/'d', o con la rueda del ratón (arriba/abajo)
         if event.key() in (Qt.Key_Left, Qt.Key_A) and self.dolphin_pos > 0:
             self.dolphin_pos -= 1
         elif event.key() in (Qt.Key_Right, Qt.Key_D) and self.dolphin_pos < 2:
             self.dolphin_pos += 1
+        x = [50, 130, 210][self.dolphin_pos]
+        self.dolphin.move(x, 350)
 
+    def wheelEvent(self, event):
+        # Desplaza el delfín con la rueda del ratón
+        delta = event.angleDelta().y()
+        if delta > 0 and self.dolphin_pos > 0:
+            self.dolphin_pos -= 1
+        elif delta < 0 and self.dolphin_pos < 2:
+            self.dolphin_pos += 1
         x = [50, 130, 210][self.dolphin_pos]
         self.dolphin.move(x, 350)
 
@@ -436,7 +471,7 @@ class MiniGameDialog(QDialog):
     def activate_slowdown(self):
         self._old_timer_interval = self.timer.interval()
         self.timer.setInterval(self._old_timer_interval * 2)
-        duration = random.randint(3000, 5000)
+        duration = random.randint(5000, 5000)
         self._slowdown_remaining = duration // 1000  # segundos
 
         # Mostrar el label y actualizarlo
@@ -474,3 +509,23 @@ class MiniGameDialog(QDialog):
         self.slowdown_label.hide()
         if hasattr(self, "_slowdown_counter_timer"):
             self._slowdown_counter_timer.stop()
+
+    def show_effect(self, text, color="#fff", duration=500):
+        """Muestra un efecto visual sobre el delfín."""
+        effect_label = QLabel(text, self)
+        effect_label.setStyleSheet(f"font-size: 22px; font-weight: bold; color: {color}; background: transparent;")
+        # Centra el efecto sobre el delfín
+        x = self.dolphin.x() + self.dolphin.width() // 2 - 10
+        y = self.dolphin.y() - 20
+        effect_label.move(x, y)
+        effect_label.show()
+        # Fade out y eliminar
+        QTimer.singleShot(duration, effect_label.deleteLater)
+
+    def shake_window(self, shakes=8, distance=8, duration=120):
+        """Sacude la ventana del juego para simular un golpe."""
+        original_pos = self.pos()
+        for i in range(shakes):
+            offset = (-1 if i % 2 == 0 else 1) * distance
+            QTimer.singleShot(i * (duration // shakes), lambda x=offset: self.move(original_pos.x() + x, original_pos.y()))
+        QTimer.singleShot(duration, lambda: self.move(original_pos))

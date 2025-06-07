@@ -6,12 +6,12 @@
     "api_user_agent": "tag-gallery-app/1.0 (by tu_usuario)",
     "max_downloads_per_tag": 50,
     "window_size": {
-        "width": 1200,
-        "height": 600
+        "width": 1536,
+        "height": 793
     },
-    "show_tag_dock": true,
-    "show_console_dock": false,
-    "start_maximized": false,
+    "start_maximized": true,
     "card_size": 170,
-    "game_high_score": 73
+    "game_high_score": 19,
+    "window_geometry": "AdnQywADAAAAAAAA////+QAABf8AAAMvAAAAqAAAAGwAAASlAAACXwAAAAACAAAABgAAAAAAAAAAFwAABf8AAAMv",
+    "window_state": "AAAA/wAAAAD9AAAAAgAAAAAAAADzAAAC4vwCAAAAAfsAAAAOAFQAYQBnAEQAbwBjAGsBAAAAFgAAAuIAAACOAP///wAAAAMAAAYAAAAAefwBAAAAAfsAAAAWAEMAbwBuAHMAbwBsAGUARABvAGMAawAAAAAAAAAGAAAAAE4A////AAAFCQAAAuIAAAAEAAAABAAAAAgAAAAI/AAAAAA="
 }

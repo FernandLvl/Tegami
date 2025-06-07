@@ -29,7 +29,7 @@ Tegami/
 │
 ├── downloads/                 # carpeta para almacenamiento de imágenes descargadas
 │   ├── originals/             # imágenes originales descargadas (sin procesar)
-│   ├── thumbnails/            # miniaturas generadas de las imágenes originales
+│   ├── preview/               # miniaturas generadas o descargadas de las imágenes originales
 │
 ├── gui/                       # interfaz gráfica de usuario (PySide6)
 │   ├── main_window.py         # clase principal de la ventana, conecta toda la interfaz
