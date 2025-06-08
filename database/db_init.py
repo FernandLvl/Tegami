@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS resources (
     id INTEGER PRIMARY KEY,
     booru_id INTEGER,
     source TEXT NOT NULL,
+    file_url TEXT NOT NULL,
+    preview_url TEXT NOT NULL,
     file_path TEXT NOT NULL,
     preview_path TEXT,
     file_type TEXT NOT NULL,

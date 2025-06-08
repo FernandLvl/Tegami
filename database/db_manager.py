@@ -48,9 +48,88 @@ class DBManager:
             """, tag_ids + [len(tag_ids)])
             return cursor.fetchall()
 
-    # Puedes agregar más métodos: buscar por id, eliminar, actualizar, etc.
+    def get_related_tags(self, tag_query: str = "", limit: int = 50) -> list:
+        tags = [t for t in tag_query.strip().split() if t]
 
-# Uso recomendado en tu código principal:
-# from database.db_manager import DBManager
-# db = DBManager()
-# previews = db.get_all_previews()
+        include_tags = [t for t in tags if not t.startswith("-")]
+        exclude_tags = [t[1:] for t in tags if t.startswith("-")]
+
+        with self.connect() as conn:
+            cursor = conn.cursor()
+
+            if not include_tags and not exclude_tags:
+                # sin etiquetas: devolver los tags más comunes
+                cursor.execute(f"""
+                    SELECT t.id, t.name, t.type, t.source, COUNT(rt.tag_id) as count
+                    FROM resource_tags rt
+                    JOIN tags t ON t.id = rt.tag_id
+                    GROUP BY rt.tag_id
+                    ORDER BY count DESC
+                    LIMIT ?
+                """, (limit,))
+                columns = [desc[0] for desc in cursor.description if desc[0] != "count"]
+                return [dict(zip(columns, row[:-1])) for row in cursor.fetchall()]
+
+            # obtener ids de etiquetas a incluir
+            if include_tags:
+                q_marks_inc = ",".join("?" for _ in include_tags)
+                cursor.execute(f"SELECT id FROM tags WHERE name IN ({q_marks_inc})", include_tags)
+                tag_ids_inc = [row[0] for row in cursor.fetchall()]
+            else:
+                tag_ids_inc = []
+
+            # obtener ids de etiquetas a excluir
+            if exclude_tags:
+                q_marks_exc = ",".join("?" for _ in exclude_tags)
+                cursor.execute(f"SELECT id FROM tags WHERE name IN ({q_marks_exc})", exclude_tags)
+                tag_ids_exc = [row[0] for row in cursor.fetchall()]
+            else:
+                tag_ids_exc = []
+
+            # buscar recursos que cumplan
+            query = """
+                SELECT rt.resource_id
+                FROM resource_tags rt
+                GROUP BY rt.resource_id
+            """
+
+            having_clauses = []
+            params = []
+
+            if tag_ids_inc:
+                query += f"""
+                    HAVING SUM(CASE WHEN rt.tag_id IN ({','.join('?' for _ in tag_ids_inc)}) THEN 1 ELSE 0 END) = ?
+                """
+                params.extend(tag_ids_inc)
+                params.append(len(tag_ids_inc))
+
+            if tag_ids_exc:
+                query += " AND " if "HAVING" in query else " HAVING "
+                query += f"""
+                    SUM(CASE WHEN rt.tag_id IN ({','.join('?' for _ in tag_ids_exc)}) THEN 1 ELSE 0 END) = 0
+                """
+                params.extend(tag_ids_exc)
+
+            cursor.execute(query, params)
+            resource_ids = [row[0] for row in cursor.fetchall()]
+            if not resource_ids:
+                return []
+
+            # buscar etiquetas relacionadas (excluyendo las ya buscadas)
+            all_tag_ids = tag_ids_inc + tag_ids_exc
+            q_marks_rids = ",".join("?" for _ in resource_ids)
+            q_marks_excl = ",".join("?" for _ in all_tag_ids) if all_tag_ids else "NULL"
+
+            cursor.execute(f"""
+                SELECT t.id, t.name, t.type, t.source, COUNT(rt.tag_id) as count
+                FROM resource_tags rt
+                JOIN tags t ON t.id = rt.tag_id
+                WHERE rt.resource_id IN ({q_marks_rids})
+                {"AND rt.tag_id NOT IN (" + q_marks_excl + ")" if all_tag_ids else ""}
+                GROUP BY rt.tag_id
+                ORDER BY count DESC
+                LIMIT ?
+            """, resource_ids + all_tag_ids + [limit] if all_tag_ids else resource_ids + [limit])
+
+            columns = [desc[0] for desc in cursor.description if desc[0] != "count"]
+            return [dict(zip(columns, row[:-1])) for row in cursor.fetchall()]

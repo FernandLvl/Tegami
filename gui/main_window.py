@@ -39,6 +39,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Tegami v0.1")
+        self.setWindowIcon(QIcon("resources/logo.png"))
 
         self.tag_dock = None
         self.console_dock = None
@@ -70,7 +71,7 @@ class MainWindow(QMainWindow):
         if state:
             self.restoreState(QByteArray.fromBase64(state.encode()))
         
-        self.test_guardar_e621()
+        # self.test_guardar_e621()
 
 
 
@@ -134,11 +135,10 @@ class MainWindow(QMainWindow):
 
     def _create_dock_widgets(self):
         # dock lateral izquierdo para filtros por tag
-        tags = self.db.get_all_tags()
-        self.tag_dock = TagDock(tags, self)
+        self.tag_dock = TagDock(self.db, self)
         self.tag_dock.setObjectName("TagDock")
         self.addDockWidget(Qt.LeftDockWidgetArea, self.tag_dock)
-        self.tag_dock.tags_selected.connect(self.on_tags_selected)
+        # self.tag_dock.tags_selected.connect(self.on_tags_selected)
 
         # dock inferior para mensajes o consola
         self.console_dock = QDockWidget(tr("dock_console"), self)
@@ -149,21 +149,6 @@ class MainWindow(QMainWindow):
         self.console_dock.setWidget(console_text)
         self.console_dock.setAllowedAreas(Qt.BottomDockWidgetArea)
         self.addDockWidget(Qt.BottomDockWidgetArea, self.console_dock)
-
-        # Aplicar visibilidad de los docks según configuración
-        # show_tag_dock = self._get_setting("show_tag_dock")
-        # show_console_dock = self._get_setting("show_console_dock")
-        # if self.tag_dock is not None:
-        #     self.tag_dock.setVisible(show_tag_dock if show_tag_dock is not None else True)
-        #     self.tag_dock.visibilityChanged.connect(
-        #         lambda visible: self._on_dock_visibility_change("show_tag_dock", visible)
-        #     )
-
-        # if self.console_dock is not None:
-        #     self.console_dock.setVisible(show_console_dock if show_console_dock is not None else True)
-        #     self.console_dock.visibilityChanged.connect(
-        #         lambda visible: self._on_dock_visibility_change("show_console_dock", visible)
-        #     )
 
     def _create_status_bar(self):
         self.status = QStatusBar()

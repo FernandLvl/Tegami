@@ -56,12 +56,14 @@ def e621_save_json(json_data, db_path='data/gallery.db'):
         # insertar en resources
         cur.execute("""
             INSERT OR IGNORE INTO resources (
-                booru_id, source, file_path, preview_path, file_type, size,
+                booru_id, source, file_url, preview_url, file_path, 
+                preview_path, file_type, size,
                 width, height, duration, rating, booru_status, md5,
                 created_at, downloaded_at, tags_updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            booru_id, source, file_path, preview_path, ext, size,
+            booru_id, source, file_url, preview_url, file_path, 
+            preview_path, ext, size,
             width, height, duration, rating, booru_status, md5,
             created_at, downloaded_at, tags_updated_at
         ))

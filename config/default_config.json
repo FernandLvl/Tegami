@@ -3,15 +3,16 @@
     "language": "es",
     "download_path": "downloads",
     "database_path": "data/gallery.db",
-    "api_user_agent": "tag-gallery-app/1.0 (by tu_usuario)",
+    "api_user_agent": "tag-gallery-app/0.1 (by FernandLvL)",
     "max_downloads_per_tag": 50,
+    "tag_list_limit": 20,
     "window_size": {
-        "width": 1536,
-        "height": 793
+        "width": 1073,
+        "height": 443
     },
-    "start_maximized": true,
+    "start_maximized": false,
     "card_size": 170,
     "game_high_score": 19,
-    "window_geometry": "AdnQywADAAAAAAAA////+QAABf8AAAMvAAAAqAAAAGwAAASlAAACXwAAAAACAAAABgAAAAAAAAAAFwAABf8AAAMv",
-    "window_state": "AAAA/wAAAAD9AAAAAgAAAAAAAADzAAAC4vwCAAAAAfsAAAAOAFQAYQBnAEQAbwBjAGsBAAAAFgAAAuIAAACOAP///wAAAAMAAAYAAAAAefwBAAAAAfsAAAAWAEMAbwBuAHMAbwBsAGUARABvAGMAawAAAAAAAAAGAAAAAE4A////AAAFCQAAAuIAAAAEAAAABAAAAAgAAAAI/AAAAAA="
+    "window_geometry": "AdnQywADAAAAAAFaAAAAMAAABYoAAAIIAAABWgAAAE4AAAWKAAACCAAAAAAAAAAABgAAAAFaAAAATgAABYoAAAII",
+    "window_state": "AAAA/wAAAAD9AAAAAgAAAAAAAAFLAAABhPwCAAAAAfsAAAAOAFQAYQBnAEQAbwBjAGsBAAAAFgAAAYQAAACJAP///wAAAAMAAAYAAAAAefwBAAAAAfsAAAAWAEMAbwBuAHMAbwBsAGUARABvAGMAawAAAAAAAAAGAAAAAE4A////AAAC4gAAAYQAAAAEAAAABAAAAAgAAAAI/AAAAAA="
 }
