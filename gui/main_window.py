@@ -2,7 +2,7 @@ import json
 from PySide6.QtWidgets import (
     QMainWindow, QTextEdit, QDockWidget, QListWidget,
     QLabel, QStatusBar, QMenuBar, QMenu, QWidget, QVBoxLayout, QScrollArea, QHBoxLayout,
-    QPushButton, QSizePolicy
+    QPushButton, QSizePolicy, QToolBar  # <-- agrega QToolBar aquí
 )
 from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QAction
@@ -57,6 +57,7 @@ class MainWindow(QMainWindow):
         self._create_central_widget()
         self._create_dock_widgets()      # ← primero los docks
         self._create_menu_bar()          # ← luego el menú
+        self._create_toolbar()           # ← agrega el toolbar después del menú
 
         # restaurar geometría y estado si existen
         geometry = self._get_setting("window_geometry")
@@ -103,7 +104,7 @@ class MainWindow(QMainWindow):
 
         # menú view
         view_menu = menu_bar.addMenu(tr("menu_view"))
-        #logica para ocultar o mostrar docks
+        #logica para ocultar o mostrar dockss
         
         # menú Ventana
         window_menu = menu_bar.addMenu(tr("menu_window"))
@@ -201,6 +202,21 @@ class MainWindow(QMainWindow):
         )
         self.setCentralWidget(gallery_widget)
 
+    def _create_toolbar(self):
+        toolbar = QToolBar("Barra de herramientas", self)
+        toolbar.setMovable(True)
+        toolbar.setFloatable(True)
+        toolbar.setIconSize(QSize(20, 20))
+
+        # Botón de nuevo (demostrativo)
+        new_action = QAction(QIcon(os.path.join(ICON_PATH, "plus-solid.svg")), tr("toolbar_new"), self)
+        toolbar.addAction(new_action)
+
+        self.mode_action = QAction(QIcon("resources/icons/cloud-off.svg"), "Modo Offline", self)
+        self.mode_action.setCheckable(True)
+        self.mode_action.setChecked(False)
+        self.mode_action.triggered.connect(self.toggle_mode)
+        toolbar.addAction(self.mode_action)
 
 
     # --------------------
@@ -251,6 +267,17 @@ class MainWindow(QMainWindow):
         dlg = AboutDialog(self)
         dlg.exec()
 
+    def toggle_mode(self):
+        if self.mode_action.isChecked():
+            # Cambiar a online
+            self.mode_action.setIcon(QIcon("resources/icons/cloud.svg"))
+            self.mode_action.setText("Modo Online")
+            self.show_booru_selector()
+        else:
+            # Cambiar a offline
+            self.mode_action.setIcon(QIcon("resources/icons/cloud-off.svg"))
+            self.mode_action.setText("Modo Offline")
+            # Oculta paneles online, muestra solo offline
 
 
     # --------------------
