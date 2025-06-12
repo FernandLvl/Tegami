@@ -10,18 +10,21 @@ class GalleryListWidget(QListWidget):
         super().__init__(parent)
         self.previews = previews
         self.card_size = card_size
+        self.missing_previews = []
         self.setViewMode(QListWidget.IconMode)
         self.setResizeMode(QListWidget.Adjust)
         self.setMovement(QListWidget.Static)
         self.setSpacing(10)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.setIconSize(QSize(1, 1))  # hack: evita el reescalado automático
-        self.create_card()
+        self.setIconSize(QSize(1, 1))
+        self.create_cards()
         self.update_cards()
 
     def update_cards(self):
         # actualizar el tamaño de las tarjetas
+        if self.missing_previews:
+            print("missing_previews size:", len(self.missing_previews))
         for i in range(self.count()):
             item = self.item(i)
             card = self.itemWidget(item)
@@ -36,13 +39,19 @@ class GalleryListWidget(QListWidget):
         self.setIconSize(QSize(self.card_size, self.card_size))
         self.setGridSize(QSize(self.card_size + 10, self.card_size + 40))
 
-    def create_card(self):
-        for preview_path, booru_id in self.previews:
-            card = GalleryCard(preview_path, booru_id, self.card_size)
-            item = QListWidgetItem()
-            item.setSizeHint(card.sizeHint())
-            self.addItem(item)
-            self.setItemWidget(item, card)
+    def create_cards(self):
+            for preview_path, booru_id, source in self.previews:
+                if os.path.exists(preview_path):
+                    image_path = preview_path
+                else:
+                    image_path = "resources/image-not-found.png"
+                    self.missing_previews.append((preview_path, booru_id, source))
+
+                card = GalleryCard(image_path, booru_id, self.card_size)
+                item = QListWidgetItem()
+                item.setSizeHint(card.sizeHint())
+                self.addItem(item)
+                self.setItemWidget(item, card)
 
     def wheelEvent(self, event):
         if event.modifiers() & Qt.ControlModifier:

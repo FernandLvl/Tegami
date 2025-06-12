@@ -5,6 +5,7 @@ from PySide6.QtGui import QFont, QPainter, QLinearGradient, QColor
 from PySide6.QtMultimedia import QSoundEffect
 from PySide6.QtCore import QUrl
 from config.config import get_setting, save_setting
+from version import APP_NAME, VERSION, AUTHOR, URL
 
 import random
 import os
@@ -26,19 +27,31 @@ class AboutDialog(QDialog):
         layout = QVBoxLayout(self)
 
         # título de la app
-        title_label = QLabel("<b>Tegami - Tag Gallery App</b>")
+        title_label = QLabel()
+        self.appname = APP_NAME
+        self.version = VERSION
+        self.author = AUTHOR
+        title_label.setText(f"{self.appname}")
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
         title_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(title_label)
 
         # información del desarrollador
-        dev_label = QLabel(tr("about_dev_info"))
+        dev_label = QLabel(tr("about_dev_info").format(author=self.author))
         dev_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(dev_label)
 
         # versión o estado actual
-        version_label = QLabel(tr("about_version"))
+        version_label = QLabel(tr("about_version").format(version=self.version))
         version_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(version_label)
+
+        # enlace al repositorio
+        link_label = QLabel(f'<a href="{URL}">GitHub</a>')
+        link_label.setAlignment(Qt.AlignCenter)
+        link_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        link_label.setOpenExternalLinks(True)
+        layout.addWidget(link_label)
 
         # botón para cerrar
         close_btn = QPushButton(tr("about_button_close"))

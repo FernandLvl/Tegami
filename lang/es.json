@@ -30,8 +30,8 @@
     "dock_tags": "Etiquetas",
     "search_tags": "Buscar etiquetas",
 
-    "about_dev_info": "Desarrollado por Fernand Lovelace\ncon cariño y caos digital ♡",
-    "about_version": "Versión 0.1 (En desarrollo)",
+    "about_dev_info": "Desarrollado por {author}\ncon cariño y caos digital ♡",
+    "about_version": "{version} (En desarrollo)",
     "about_button_close": "Cerrar",
     
     "mini_game_title": "🐬🎮✨",

@@ -14,7 +14,7 @@ def clear_layout(layout):
             widget.deleteLater()
 
 class GalleryCard(QWidget):
-    def __init__(self, preview_path, booru_id, card_size=150):
+    def __init__(self, image_path, booru_id, card_size=150):
         super().__init__()
         layout = QVBoxLayout()
         layout.setContentsMargins(5, 5, 5, 5)
@@ -22,13 +22,12 @@ class GalleryCard(QWidget):
 
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
-        if os.path.exists(preview_path):
-            pixmap = QPixmap(preview_path).scaled(card_size, card_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            self.image_label.setPixmap(pixmap)
-        else:
-            # usar resources\image-not-found.png
-            pixmap = QPixmap("resources/image-not-found.png").scaled(card_size, card_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            self.image_label.setPixmap(pixmap)
+
+        pixmap = QPixmap(image_path).scaled(
+            card_size, card_size,
+            Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
+        self.image_label.setPixmap(pixmap)
 
         self.text_label = QLabel(str(booru_id))
         self.text_label.setAlignment(Qt.AlignCenter)
@@ -39,14 +38,3 @@ class GalleryCard(QWidget):
         self.setLayout(layout)
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.setFixedSize(card_size + 10, card_size + 40)
-
-    def update_grid(self):
-        width = self.width() if self.width() > 0 else 800
-        columns = max(1, width // (self.card_size + self.layout.spacing()))
-        clear_layout(self.layout)  # Limpia correctamente el layout
-        for idx, (preview_path, booru_id) in enumerate(self.previews):
-            card = GalleryCard(preview_path, booru_id, self.card_size)
-            row = idx // columns
-            col = idx % columns
-            self.layout.addWidget(card, row, col)
-        self.updateGeometry()

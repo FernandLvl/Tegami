@@ -6,13 +6,14 @@
     "api_user_agent": "tag-gallery-app/0.1 (by FernandLvL)",
     "max_downloads_per_tag": 50,
     "tag_list_limit": 20,
+    "cards_per_page": 100,
     "window_size": {
         "width": 1143,
         "height": 582
     },
     "start_maximized": false,
-    "card_size": 150,
+    "card_size": 190,
     "game_high_score": 173,
-    "window_geometry": "AdnQywADAAAAAADBAAAAaAAABTcAAALLAAAAwQAAAIYAAAU3AAACywAAAAAAAAAABgAAAADBAAAAhgAABTcAAALL",
+    "window_geometry": "AdnQywADAAAAAACvAAAAJQAABSUAAAKIAAAArwAAAEMAAAUlAAACiAAAAAAAAAAABgAAAACvAAAAQwAABSUAAAKI",
     "window_state": "AAAA/wAAAAD9AAAAAgAAAAAAAAEsAAAB8vwCAAAAAfsAAAAOAFQAYQBnAEQAbwBjAGsBAAAAMwAAAfIAAACJAP///wAAAAMAAAR3AAAAd/wBAAAAAfsAAAAWAEMAbwBuAHMAbwBsAGUARABvAGMAawAAAAAAAAAEdwAAAE4A////AAADRwAAAfIAAAAEAAAABAAAAAgAAAAI/AAAAAEAAAACAAAAAf////8BAAAAAP////8AAAAAAAAAAA=="
 }

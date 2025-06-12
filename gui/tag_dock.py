@@ -8,7 +8,8 @@ from utils.i18n import tr
 import json
 import os
 from PySide6.QtCore import Qt, QStringListModel
-from PySide6.QtWidgets import QCompleter, QListView
+from PySide6.QtWidgets import QLabel, QListWidgetItem, QHBoxLayout, QWidget
+from PySide6.QtGui import QCursor
 from PySide6.QtCore import QTimer
 
 class TagDock(QDockWidget):
@@ -93,13 +94,63 @@ class TagDock(QDockWidget):
 
     def load_tags_to_list(self, tags):
         """
-        Carga una nueva lista de tags en el QListWidget.
-        Borra los elementos anteriores y agrega los nuevos.
-        Cada tag debe ser un diccionario con al menos la clave 'name'.
+        Carga la lista de tags con etiquetas cliqueables: +, -, y nombre.
         """
         self.list_widget.clear()
-        for i, tag in enumerate(tags, 1):
-            self.list_widget.addItem(f"{tag['name']}")
+        for tag in tags:
+            tag_name = tag["name"]
+
+            # layout horizontal
+            item_widget = QWidget()
+            layout = QHBoxLayout()
+            layout.setContentsMargins(5, 2, 5, 2)
+            layout.setSpacing(5)
+
+            # crear labels cliqueables
+            plus_label = self._create_tag_label("+", lambda _, t=tag_name: self._append_tag_and_search(t))
+            minus_label = self._create_tag_label("-", lambda _, t=tag_name: self._append_tag_and_search("-" + t))
+            name_label = self._create_tag_label(tag_name, lambda _, t=tag_name: self._replace_tag_and_search(t))
+
+            layout.addWidget(plus_label)
+            layout.addWidget(minus_label)
+            layout.addWidget(name_label)
+
+            layout.addStretch()  # espacio para evitar que se vean pegados
+            item_widget.setLayout(layout)
+
+            item = QListWidgetItem()
+            item.setSizeHint(item_widget.sizeHint())
+
+            self.list_widget.addItem(item)
+            self.list_widget.setItemWidget(item, item_widget)
+
+    def _create_tag_label(self, text, callback):
+        label = QLabel(text)
+        label.setCursor(QCursor(Qt.PointingHandCursor))
+        label.setStyleSheet("""
+            QLabel {
+                color: #339;
+                text-decoration: underline;
+            }
+            QLabel:hover {
+                color: #66f;
+            }
+        """)
+        label.mousePressEvent = callback
+        return label
+
+    def _append_tag_and_search(self, tag_text):
+        current_text = self.search_bar.text().strip()
+        if current_text:
+            new_text = current_text + " " + tag_text
+        else:
+            new_text = tag_text
+        self.search_bar.setText(new_text)
+        self.emit_search_callback()
+
+    def _replace_tag_and_search(self, tag_text):
+        self.search_bar.setText(tag_text)
+        self.emit_search_callback()
 
     def update_completer_prefix(self, text: str):
         last_part = text.rsplit(" ", maxsplit=1)[-1]
@@ -131,6 +182,7 @@ class TagDock(QDockWidget):
 
     def emit_search_callback(self):
         """Llama al callback registrado con el texto de la barra de búsqueda."""
+        self.load_tags_to_list(self.db.get_related_tags(self.search_bar.text(), self.tag_limit_list))
         if hasattr(self, "_on_tags_selected_callback") and self._on_tags_selected_callback:
             self._on_tags_selected_callback(self.search_bar.text())
 

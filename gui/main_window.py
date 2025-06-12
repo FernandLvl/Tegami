@@ -21,6 +21,7 @@ from database.db_manager import DBManager
 from gui.tag_dock import TagDock
 from gui.about_dialog import AboutDialog
 from boorus.e621_sync import e621_save_json
+from version import APP_SHORT_NAME, VERSION
 
 
 
@@ -38,19 +39,28 @@ class MainWindow(QMainWindow):
     # --------------------
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Tegami v0.1")
+        self.appname = APP_SHORT_NAME
+        self.version = VERSION
+        self.window_title = f"{self.appname} - {self.version}"
+        self.setWindowTitle(self.window_title)
         self.setWindowIcon(QIcon("resources/logo.png"))
 
         self.tag_dock = None
         self.console_dock = None
         self._is_closing = False
 
+        # Configuración inicial
+        self.card_size = self._get_setting("card_size") or 150
+        self.cards_per_page = self._get_setting("cards_per_page") or 100
+        self.current_page = 1
+
         # Instancia el gestor de base de datos
         self.db = DBManager(DB_PATH)
-        self.previews = self.db.get_preview_page(1, 100, "")
+        self.previews = self.db.get_preview_page(self.current_page, self.cards_per_page, "", sources=[])
 
-        # Tamaño de tarjeta configurable
-        self.card_size = self._get_setting("card_size") or 150
+        # numero de items y páginas totales
+        self.total_items = self.db.count_preview_results("", sources=[])
+        self.total_pages = self.total_items // self.cards_per_page + (1 if self.total_items % self.cards_per_page > 0 else 0)
 
         # orden correcto de creación
         self._create_status_bar()
@@ -73,7 +83,6 @@ class MainWindow(QMainWindow):
             self.restoreState(QByteArray.fromBase64(state.encode()))
         
         # self.test_guardar_e621()
-        # self.db.get_preview_page(1, 100, "")
 
 
 
@@ -226,11 +235,16 @@ class MainWindow(QMainWindow):
     # slots / callbacks
     # --------------------
     def on_tags_selected(self, selected_tags):
+        self.current_page = 1
         if not selected_tags:
-            self.previews = self.db.get_preview_page(1, 100, "")
+            self.previews = self.db.get_preview_page(self.current_page, self.cards_per_page, "", sources=[])
+            self.total_items = self.db.count_preview_results("", sources=[])
+            self.total_pages = self.total_items // self.cards_per_page + (1 if self.total_items % self.cards_per_page > 0 else 0)
         else:
-            self.previews = self.db.get_preview_page(1, 100, selected_tags)
-        
+            self.previews = self.db.get_preview_page(self.current_page, self.cards_per_page, selected_tags, sources=[])
+            self.total_items = self.db.count_preview_results(selected_tags, sources=[])
+            self.total_pages = self.total_items // self.cards_per_page + (1 if self.total_items % self.cards_per_page > 0 else 0)
+        print(f"Total de items: {self.total_items}, Páginas totales: {self.total_pages}")
         # recargar la vista central
         self.reload_central_view(self.current_card_size)
 

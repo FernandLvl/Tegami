@@ -7,12 +7,12 @@ class DBManager:
     def connect(self):
         return sqlite3.connect(self.db_path)
 
-    def get_all_previews(self):
-        """Devuelve una lista de (preview_path, booru_id)"""
-        with self.connect() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT preview_path, booru_id FROM resources")
-            return cursor.fetchall()
+    # def get_all_previews(self):
+    #     """Devuelve una lista de (preview_path, booru_id)"""
+    #     with self.connect() as conn:
+    #         cursor = conn.cursor()
+    #         cursor.execute("SELECT preview_path, booru_id FROM resources")
+    #         return cursor.fetchall()
 
     def get_all_tags(self):
         """Devuelve una lista de diccionarios con todos los campos de la tabla tags"""
@@ -22,49 +22,52 @@ class DBManager:
             columns = [desc[0] for desc in cursor.description]
             return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
-    def get_previews_by_tags(self, tag_names):
-        """
-        Devuelve previews que tengan TODOS los tags en tag_names.
-        """
-        if not tag_names:
-            return self.get_all_previews()
-        with self.connect() as conn:
-            cursor = conn.cursor()
-            # Obtener los tag_id de los nombres
-            q_marks = ",".join("?" for _ in tag_names)
-            cursor.execute(f"SELECT id FROM tags WHERE name IN ({q_marks})", tag_names)
-            tag_ids = [row[0] for row in cursor.fetchall()]
-            if not tag_ids:
-                return []
-            # Consulta para obtener los recursos que tengan TODOS los tag_ids
-            q_marks = ",".join("?" for _ in tag_ids)
-            cursor.execute(f"""
-                SELECT r.preview_path, r.booru_id
-                FROM resources r
-                JOIN resource_tags rt ON r.id = rt.resource_id
-                WHERE rt.tag_id IN ({q_marks})
-                GROUP BY r.id
-                HAVING COUNT(DISTINCT rt.tag_id) = ?
-            """, tag_ids + [len(tag_ids)])
-            return cursor.fetchall()
+    # def get_previews_by_tags(self, tag_names):
+    #     """
+    #     Devuelve previews que tengan TODOS los tags en tag_names.
+    #     """
+    #     if not tag_names:
+    #         return self.get_all_previews()
+    #     with self.connect() as conn:
+    #         cursor = conn.cursor()
+    #         # Obtener los tag_id de los nombres
+    #         q_marks = ",".join("?" for _ in tag_names)
+    #         cursor.execute(f"SELECT id FROM tags WHERE name IN ({q_marks})", tag_names)
+    #         tag_ids = [row[0] for row in cursor.fetchall()]
+    #         if not tag_ids:
+    #             return []
+    #         # Consulta para obtener los recursos que tengan TODOS los tag_ids
+    #         q_marks = ",".join("?" for _ in tag_ids)
+    #         cursor.execute(f"""
+    #             SELECT r.preview_path, r.booru_id
+    #             FROM resources r
+    #             JOIN resource_tags rt ON r.id = rt.resource_id
+    #             WHERE rt.tag_id IN ({q_marks})
+    #             GROUP BY r.id
+    #             HAVING COUNT(DISTINCT rt.tag_id) = ?
+    #         """, tag_ids + [len(tag_ids)])
+    #         return cursor.fetchall()
 
-    def get_preview_page(self, page: int, page_size: int = 100, tag_query: str = ""):
+    def get_preview_page(self, page: int, page_size: int = 100, tag_query: str = "", sources: list[str] = []):
         offset = (page - 1) * page_size
 
         # dividir el query en tags, separar los normales y los excluyentes
         tags = tag_query.strip().split()
         include_tags = [tag for tag in tags if not tag.startswith("-")]
-        # print("Include tags:", include_tags)
         exclude_tags = [tag[1:] for tag in tags if tag.startswith("-")]
-        # print("Exclude tags:", exclude_tags)
 
-        # construir condiciones dinámicamente
         where_clauses = []
         params = []
 
-        # filtros de inclusión: el recurso debe tener TODOS los tags incluidos
+        # filtro por sources (si hay)
+        if sources:
+            placeholders = ",".join(["?"] * len(sources))
+            where_clauses.append(f"resources.source IN ({placeholders})")
+            params.extend(sources)
+
+        # tags incluidos: el recurso debe tener todos
         for tag in include_tags:
-            where_clauses.append(f"""
+            where_clauses.append("""
                 resources.id IN (
                     SELECT resource_tags.resource_id
                     FROM resource_tags
@@ -74,9 +77,9 @@ class DBManager:
             """)
             params.append(tag)
 
-        # filtros de exclusión: el recurso NO debe tener NINGUNO de esos tags
+        # tags excluidos: el recurso no debe tener ninguno
         for tag in exclude_tags:
-            where_clauses.append(f"""
+            where_clauses.append("""
                 resources.id NOT IN (
                     SELECT resource_tags.resource_id
                     FROM resource_tags
@@ -86,13 +89,13 @@ class DBManager:
             """)
             params.append(tag)
 
-        # juntar condiciones
+        # construir WHERE
         where_sql = " AND ".join(where_clauses)
         if where_sql:
             where_sql = "WHERE " + where_sql
 
         query = f"""
-            SELECT preview_path, booru_id
+            SELECT preview_path, booru_id, source
             FROM resources
             {where_sql}
             ORDER BY id DESC
@@ -196,3 +199,57 @@ class DBManager:
 
             columns = [desc[0] for desc in cursor.description if desc[0] != "count"]
             return [dict(zip(columns, row[:-1])) for row in cursor.fetchall()]
+
+    def count_preview_results(self, tag_query: str = "", sources: list[str] = []) -> int:
+        # dividir el query en tags, separar los normales y los excluyentes
+        tags = tag_query.strip().split()
+        include_tags = [tag for tag in tags if not tag.startswith("-")]
+        exclude_tags = [tag[1:] for tag in tags if tag.startswith("-")]
+
+        where_clauses = []
+        params = []
+
+        # filtro por sources (si hay)
+        if sources:
+            placeholders = ",".join(["?"] * len(sources))
+            where_clauses.append(f"resources.source IN ({placeholders})")
+            params.extend(sources)
+
+        # tags incluidos: el recurso debe tener todos
+        for tag in include_tags:
+            where_clauses.append("""
+                resources.id IN (
+                    SELECT resource_tags.resource_id
+                    FROM resource_tags
+                    JOIN tags ON tags.id = resource_tags.tag_id
+                    WHERE tags.name = ?
+                )
+            """)
+            params.append(tag)
+
+        # tags excluidos: el recurso no debe tener ninguno
+        for tag in exclude_tags:
+            where_clauses.append("""
+                resources.id NOT IN (
+                    SELECT resource_tags.resource_id
+                    FROM resource_tags
+                    JOIN tags ON tags.id = resource_tags.tag_id
+                    WHERE tags.name = ?
+                )
+            """)
+            params.append(tag)
+
+        # construir WHERE
+        where_sql = " AND ".join(where_clauses)
+        if where_sql:
+            where_sql = "WHERE " + where_sql
+
+        query = f"""
+            SELECT COUNT(*) FROM resources
+            {where_sql}
+        """
+
+        with self.connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            return cursor.fetchone()[0]
