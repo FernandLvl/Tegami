@@ -94,7 +94,7 @@ class TagDock(QDockWidget):
         """
         self.list_widget.clear()
         for i, tag in enumerate(tags, 1):
-            self.list_widget.addItem(f"{i}. {tag['name']}")
+            self.list_widget.addItem(f"{tag['name']}")
 
     def update_completer_prefix(self, text: str):
         last_part = text.rsplit(" ", maxsplit=1)[-1]

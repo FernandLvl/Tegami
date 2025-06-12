@@ -48,6 +48,29 @@ class DBManager:
             """, tag_ids + [len(tag_ids)])
             return cursor.fetchall()
 
+    def get_preview_page(self, page: int, page_size: int = 100):
+        offset = (page - 1) * page_size
+
+        print(f"Page: {page}, Page Size: {page_size}, Offset: {offset}")
+
+        query = """
+            SELECT preview_path, booru_id
+            FROM resources
+            ORDER BY id DESC
+            LIMIT ? OFFSET ?
+        """
+        with self.connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (page_size, offset))
+            return cursor.fetchall()
+    
+    def get_total_count(self) -> int:
+        """Devuelve el total de recursos en la base de datos."""
+        with self.connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM resources")
+            return cursor.fetchone()[0]
+
     def get_related_tags(self, tag_query: str = "", limit: int = 50) -> list:
         tags = [t for t in tag_query.strip().split() if t]
 

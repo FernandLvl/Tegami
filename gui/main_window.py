@@ -73,6 +73,7 @@ class MainWindow(QMainWindow):
             self.restoreState(QByteArray.fromBase64(state.encode()))
         
         # self.test_guardar_e621()
+        # self.db.get_preview_page(1, 100)
 
 
 
@@ -223,12 +224,12 @@ class MainWindow(QMainWindow):
     # --------------------
     # slots / callbacks
     # --------------------
-    def on_tags_selected(self, selected_tags):
-        # Si selected_tags es una lista de diccionarios, extrae los nombres
-        tag_names = [tag['name'] if isinstance(tag, dict) else tag for tag in selected_tags]
-        filtered_previews = self.db.get_previews_by_tags(tag_names)
-        self.previews = filtered_previews
-        self.reload_central_view()
+    # def on_tags_selected(self, selected_tags):
+    #     # Si selected_tags es una lista de diccionarios, extrae los nombres
+    #     tag_names = [tag['name'] if isinstance(tag, dict) else tag for tag in selected_tags]
+    #     filtered_previews = self.db.get_previews_by_tags(tag_names)
+    #     self.previews = filtered_previews
+    #     self.reload_central_view()
 
     def reload_central_view(self, card_size=None):
         if card_size is None:
