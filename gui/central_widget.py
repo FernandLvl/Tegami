@@ -1,68 +1,62 @@
-# gui/central_widget.py
-
-from PySide6.QtWidgets import QWidget, QGridLayout, QScrollArea, QVBoxLayout, QTableWidget, QTableWidgetItem, QLabel, QAbstractItemView
-from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtWidgets import QWidget, QScrollArea, QVBoxLayout, QTableWidget, QTableWidgetItem, QLabel, QAbstractItemView, QSizePolicy, QListWidget, QListWidgetItem
+from PySide6.QtCore import Qt, QSize
 from .gallery_card import GalleryCard
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QIcon
 import os
 
-class GridContainer(QWidget):
-    card_size_changed = Signal(int)
-
-    def __init__(self, previews, card_size=150, on_card_size_change=None, parent=None):
+class GalleryListWidget(QListWidget):
+    def __init__(self, previews, card_size=150, parent=None):
         super().__init__(parent)
         self.previews = previews
         self.card_size = card_size
-        self.on_card_size_change = on_card_size_change
-        self.layout = QGridLayout(self)
-        self.layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        self.layout.setSpacing(10)
-        self.setMouseTracking(True)
-        self.update_grid()
+        self.setViewMode(QListWidget.IconMode)
+        self.setResizeMode(QListWidget.Adjust)
+        self.setMovement(QListWidget.Static)
+        self.setSpacing(10)
+        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setIconSize(QSize(1, 1))  # hack: evita el reescalado automático
+        self.create_card()
+        self.update_cards()
 
-    def update_grid(self):
-        width = self.width() if self.width() > 0 else 800
-        columns = max(1, width // (self.card_size + self.layout.spacing()))
-        for i in reversed(range(self.layout.count())):
-            self.layout.itemAt(i).widget().setParent(None)
-        for idx, (preview_path, booru_id) in enumerate(self.previews):
+    def update_cards(self):
+        # actualizar el tamaño de las tarjetas
+        for i in range(self.count()):
+            item = self.item(i)
+            card = self.itemWidget(item)
+            if card:
+                card.setFixedSize(self.card_size + 10, self.card_size + 40)
+                card.image_label.setFixedSize(self.card_size, self.card_size)
+                card.text_label.setFixedWidth(self.card_size)
+                card.updateGeometry()
+            item.setSizeHint(card.sizeHint())
+            item.setSizeHint(QSize(self.card_size + 10, self.card_size + 40))
+        self.updateGeometry()
+        self.setIconSize(QSize(self.card_size, self.card_size))
+        self.setGridSize(QSize(self.card_size + 10, self.card_size + 40))
+
+    def create_card(self):
+        for preview_path, booru_id in self.previews:
             card = GalleryCard(preview_path, booru_id, self.card_size)
-            row = idx // columns
-            col = idx % columns
-            self.layout.addWidget(card, row, col)
-        self.updateGeometry()  # <-- importante para recalcular el tamaño
-
-    def resizeEvent(self, event):
-        self.update_grid()
-        super().resizeEvent(event)
+            item = QListWidgetItem()
+            item.setSizeHint(card.sizeHint())
+            self.addItem(item)
+            self.setItemWidget(item, card)
 
     def wheelEvent(self, event):
-        if self.underMouse() and event.modifiers() & Qt.ControlModifier:
+        if event.modifiers() & Qt.ControlModifier:
             delta = event.angleDelta().y()
             new_size = self.card_size + (10 if delta > 0 else -10)
             new_size = max(50, min(400, new_size))
             if new_size != self.card_size:
                 self.card_size = new_size
-                if self.on_card_size_change:
-                    self.on_card_size_change(new_size)
-                self.update_grid()
+                self.update_cards()
             event.accept()
         else:
             super().wheelEvent(event)
 
-    def sizeHint(self):
-        # Calcula columnas igual que en update_grid
-        width = self.width() if self.width() > 0 else 800
-        spacing = self.layout.spacing()
-        columns = max(1, width // (self.card_size + spacing))
-        rows = (len(self.previews) + columns - 1) // columns
-        # Alto total = filas * alto de tarjeta + espacios
-        height = rows * (self.card_size + 40) + (rows - 1) * spacing + 10
-        # Ancho total = igual que el ancho actual
-        return QSize(width, height)
-
 def create_grid_view(previews, card_size=150, on_card_size_change=None, parent=None):
-    container = GridContainer(previews, card_size, on_card_size_change, parent)
+    container = GalleryListWidget(previews, card_size, parent)
     scroll = QScrollArea()
     scroll.setWidgetResizable(True)
     scroll.setWidget(container)
@@ -90,7 +84,8 @@ def create_list_view(previews):
             pixmap = QPixmap(preview_path).scaled(thumb_size, thumb_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             label.setPixmap(pixmap)
         else:
-            label.setText("[no image]")
+            icon = QIcon("resources/image-not-found.png")
+            label.setPixmap(icon.pixmap(thumb_size, thumb_size))
         table.setCellWidget(row, 0, label)
 
         # ID

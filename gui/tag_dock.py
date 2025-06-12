@@ -77,6 +77,15 @@ class TagDock(QDockWidget):
 
         self.load_tags_to_list(self.db.get_related_tags("", self.tag_limit_list))
 
+        # Limitar el ancho del dock
+        self.setMinimumWidth(180)
+        self.setMaximumWidth(300)
+        self.resize(220, self.height())  # ancho preferido
+
+        # Opcional: evitar que los nombres largos expandan el QListWidget
+        self.list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.list_widget.setWordWrap(True)
+
     def load_tags_to_list(self, tags):
         """
         Carga una nueva lista de tags en el QListWidget.

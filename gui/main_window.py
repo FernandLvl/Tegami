@@ -207,6 +207,7 @@ class MainWindow(QMainWindow):
         toolbar.setMovable(True)
         toolbar.setFloatable(True)
         toolbar.setIconSize(QSize(20, 20))
+        self.addToolBar(toolbar)
 
         # Botón de nuevo (demostrativo)
         new_action = QAction(QIcon(os.path.join(ICON_PATH, "plus-solid.svg")), tr("toolbar_new"), self)
