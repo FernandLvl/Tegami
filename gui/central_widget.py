@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QWidget, QScrollArea, QVBoxLayout, QTableWidget, Q
 from PySide6.QtCore import Qt, QSize
 from .gallery_card import GalleryCard
 from PySide6.QtGui import QPixmap, QIcon
+from config.config import get_setting
 import os
 
 class GalleryListWidget(QListWidget):
@@ -50,10 +51,17 @@ class GalleryListWidget(QListWidget):
             new_size = max(50, min(400, new_size))
             if new_size != self.card_size:
                 self.card_size = new_size
+                self._save_config("card_size", new_size)
                 self.update_cards()
             event.accept()
         else:
             super().wheelEvent(event)
+
+    def _save_config(self, key, value):
+        if key is None:
+            return  # evita errores tontos
+        from config.config import save_setting
+        save_setting(key, value)
 
 def create_grid_view(previews, card_size=150, on_card_size_change=None, parent=None):
     container = GalleryListWidget(previews, card_size, parent)

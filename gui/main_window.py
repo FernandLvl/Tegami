@@ -47,7 +47,7 @@ class MainWindow(QMainWindow):
 
         # Instancia el gestor de base de datos
         self.db = DBManager(DB_PATH)
-        self.previews = self.db.get_all_previews()
+        self.previews = self.db.get_preview_page(1, 100, "")
 
         # Tamaño de tarjeta configurable
         self.card_size = self._get_setting("card_size") or 150
@@ -73,7 +73,7 @@ class MainWindow(QMainWindow):
             self.restoreState(QByteArray.fromBase64(state.encode()))
         
         # self.test_guardar_e621()
-        # self.db.get_preview_page(1, 100)
+        # self.db.get_preview_page(1, 100, "")
 
 
 
@@ -140,7 +140,7 @@ class MainWindow(QMainWindow):
         self.tag_dock = TagDock(self.db, self)
         self.tag_dock.setObjectName("TagDock")
         self.addDockWidget(Qt.LeftDockWidgetArea, self.tag_dock)
-        # self.tag_dock.tags_selected.connect(self.on_tags_selected)
+        self.tag_dock.set_on_tags_selected_callback(self.on_tags_selected)
 
         # dock inferior para mensajes o consola
         self.console_dock = QDockWidget(tr("dock_console"), self)
@@ -221,15 +221,18 @@ class MainWindow(QMainWindow):
         toolbar.addAction(self.mode_action)
 
 
+
     # --------------------
     # slots / callbacks
     # --------------------
-    # def on_tags_selected(self, selected_tags):
-    #     # Si selected_tags es una lista de diccionarios, extrae los nombres
-    #     tag_names = [tag['name'] if isinstance(tag, dict) else tag for tag in selected_tags]
-    #     filtered_previews = self.db.get_previews_by_tags(tag_names)
-    #     self.previews = filtered_previews
-    #     self.reload_central_view()
+    def on_tags_selected(self, selected_tags):
+        if not selected_tags:
+            self.previews = self.db.get_preview_page(1, 100, "")
+        else:
+            self.previews = self.db.get_preview_page(1, 100, selected_tags)
+        
+        # recargar la vista central
+        self.reload_central_view(self.current_card_size)
 
     def reload_central_view(self, card_size=None):
         if card_size is None:
@@ -252,18 +255,18 @@ class MainWindow(QMainWindow):
             self.current_card_size = card_size
             self.reload_central_view(card_size)
 
-    def load_previews_from_db(self):
-        db_path = "data/gallery.db"
-        previews = []
-        try:
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute("SELECT preview_path, booru_id FROM resources")
-            previews = cursor.fetchall()
-            conn.close()
-        except Exception as e:
-            print(f"Error al cargar la base de datos: {e}")
-        return previews
+    # def load_previews_from_db(self):
+    #     db_path = "data/gallery.db"
+    #     previews = []
+    #     try:
+    #         conn = sqlite3.connect(db_path)
+    #         cursor = conn.cursor()
+    #         cursor.execute("SELECT preview_path, booru_id FROM resources")
+    #         previews = cursor.fetchall()
+    #         conn.close()
+    #     except Exception as e:
+    #         print(f"Error al cargar la base de datos: {e}")
+    #     return previews
 
     def show_about_dialog(self):
         dlg = AboutDialog(self)

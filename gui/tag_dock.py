@@ -32,6 +32,8 @@ class TagDock(QDockWidget):
         search_layout = QHBoxLayout()
         self.search_bar = QLineEdit()
         self.search_bar.setPlaceholderText(tr("search_tags"))
+        # callback al presionar Enter en la barra de búsqueda
+        self.search_bar.returnPressed.connect(self._on_return_pressed)
 
         # cargar todos los tags completos
         all_tags_full = self.db.get_all_tags()
@@ -58,12 +60,15 @@ class TagDock(QDockWidget):
         self.search_btn = QPushButton("🔍")
         self.search_btn.setToolTip(tr("search"))
         self.search_btn.setFixedWidth(32)
+        # callback al presionar el botón de búsqueda
+        self.search_btn.clicked.connect(self.emit_search_callback)
         search_layout.addWidget(self.search_btn)
 
-        # botón de limpiar (sin funcionalidad)
+        # botón de limpiar
         self.clear_btn = QPushButton("✖")
         self.clear_btn.setToolTip(tr("clear"))
         self.clear_btn.setFixedWidth(32)
+        self.clear_btn.clicked.connect(self.clear_and_emit_search_callback)
         search_layout.addWidget(self.clear_btn)
 
         layout.addLayout(search_layout)
@@ -119,5 +124,24 @@ class TagDock(QDockWidget):
                 self.search_bar.setText(text + " ")
             self.search_bar.setCursorPosition(len(self.search_bar.text()))
         QTimer.singleShot(0, add_space)
+
+    def set_on_tags_selected_callback(self, callback):
+        """Permite registrar una función callback para búsqueda."""
+        self._on_tags_selected_callback = callback
+
+    def emit_search_callback(self):
+        """Llama al callback registrado con el texto de la barra de búsqueda."""
+        if hasattr(self, "_on_tags_selected_callback") and self._on_tags_selected_callback:
+            self._on_tags_selected_callback(self.search_bar.text())
+
+    def _on_return_pressed(self):
+        # Solo dispara el callback si el popup del completer NO está visible
+        if not self.completer.popup().isVisible():
+            self.emit_search_callback()
+
+    def clear_and_emit_search_callback(self):
+        """Limpia la barra de búsqueda y llama al callback con texto vacío."""
+        self.search_bar.clear()
+        self.emit_search_callback()
 
 

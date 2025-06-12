@@ -48,20 +48,60 @@ class DBManager:
             """, tag_ids + [len(tag_ids)])
             return cursor.fetchall()
 
-    def get_preview_page(self, page: int, page_size: int = 100):
+    def get_preview_page(self, page: int, page_size: int = 100, tag_query: str = ""):
         offset = (page - 1) * page_size
 
-        print(f"Page: {page}, Page Size: {page_size}, Offset: {offset}")
+        # dividir el query en tags, separar los normales y los excluyentes
+        tags = tag_query.strip().split()
+        include_tags = [tag for tag in tags if not tag.startswith("-")]
+        # print("Include tags:", include_tags)
+        exclude_tags = [tag[1:] for tag in tags if tag.startswith("-")]
+        # print("Exclude tags:", exclude_tags)
 
-        query = """
+        # construir condiciones dinámicamente
+        where_clauses = []
+        params = []
+
+        # filtros de inclusión: el recurso debe tener TODOS los tags incluidos
+        for tag in include_tags:
+            where_clauses.append(f"""
+                resources.id IN (
+                    SELECT resource_tags.resource_id
+                    FROM resource_tags
+                    JOIN tags ON tags.id = resource_tags.tag_id
+                    WHERE tags.name = ?
+                )
+            """)
+            params.append(tag)
+
+        # filtros de exclusión: el recurso NO debe tener NINGUNO de esos tags
+        for tag in exclude_tags:
+            where_clauses.append(f"""
+                resources.id NOT IN (
+                    SELECT resource_tags.resource_id
+                    FROM resource_tags
+                    JOIN tags ON tags.id = resource_tags.tag_id
+                    WHERE tags.name = ?
+                )
+            """)
+            params.append(tag)
+
+        # juntar condiciones
+        where_sql = " AND ".join(where_clauses)
+        if where_sql:
+            where_sql = "WHERE " + where_sql
+
+        query = f"""
             SELECT preview_path, booru_id
             FROM resources
+            {where_sql}
             ORDER BY id DESC
             LIMIT ? OFFSET ?
         """
+
         with self.connect() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, (page_size, offset))
+            cursor.execute(query, (*params, page_size, offset))
             return cursor.fetchall()
     
     def get_total_count(self) -> int:
