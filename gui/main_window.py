@@ -50,16 +50,19 @@ class MainWindow(QMainWindow):
         self._is_closing = False
 
         # Configuración inicial
+        self.current_view = "grid"
         self.card_size = self._get_setting("card_size") or 150
         self.cards_per_page = self._get_setting("cards_per_page") or 100
         self.current_page = 1
+        self.tags_query = ""
+        self.sources = []
 
         # Instancia el gestor de base de datos
         self.db = DBManager(DB_PATH)
-        self.previews = self.db.get_preview_page(self.current_page, self.cards_per_page, "", sources=[])
+        self.previews = self.db.get_preview_page(self.current_page, self.cards_per_page, "", self.sources)
 
         # numero de items y páginas totales
-        self.total_items = self.db.count_preview_results("", sources=[])
+        self.total_items = self.db.count_preview_results("", self.sources)
         self.total_pages = self.total_items // self.cards_per_page + (1 if self.total_items % self.cards_per_page > 0 else 0)
 
         # orden correcto de creación
@@ -83,6 +86,11 @@ class MainWindow(QMainWindow):
             self.restoreState(QByteArray.fromBase64(state.encode()))
         
         # self.test_guardar_e621()
+
+        # self.on_page_change(1)
+        # self.on_page_change(2)
+        # self.on_page_change(3)
+
 
 
 
@@ -197,23 +205,18 @@ class MainWindow(QMainWindow):
 
         # conectar botones a las funciones de cambio de vista
         self.list_view_btn.clicked.connect(lambda: self.switch_view("list"))
-        self.grid_view_btn.clicked.connect(lambda: self.switch_view("grid", self.current_card_size))  # o el tamaño que desees
+        self.grid_view_btn.clicked.connect(lambda: self.switch_view("grid"))
 
         # añadir el contenedor de botones al status bar
         self.status.addPermanentWidget(button_container)
 
     def _create_central_widget(self):
-        self.current_view = "grid"
-        self.current_card_size = self.card_size
-        gallery_widget = create_grid_view(
-            self.previews,
-            self.card_size,
-            self._on_card_size_change
-        )
-        self.setCentralWidget(gallery_widget)
+        # simplificado
+        self.reload_central_view()
 
     def _create_toolbar(self):
         toolbar = QToolBar("Barra de herramientas", self)
+        toolbar.setObjectName("Toolbar")
         toolbar.setMovable(True)
         toolbar.setFloatable(True)
         toolbar.setIconSize(QSize(20, 20))
@@ -236,38 +239,48 @@ class MainWindow(QMainWindow):
     # --------------------
     def on_tags_selected(self, selected_tags):
         self.current_page = 1
-        if not selected_tags:
-            self.previews = self.db.get_preview_page(self.current_page, self.cards_per_page, "", sources=[])
-            self.total_items = self.db.count_preview_results("", sources=[])
-            self.total_pages = self.total_items // self.cards_per_page + (1 if self.total_items % self.cards_per_page > 0 else 0)
-        else:
-            self.previews = self.db.get_preview_page(self.current_page, self.cards_per_page, selected_tags, sources=[])
-            self.total_items = self.db.count_preview_results(selected_tags, sources=[])
-            self.total_pages = self.total_items // self.cards_per_page + (1 if self.total_items % self.cards_per_page > 0 else 0)
+        self.tags_query = selected_tags or ""
+        self.previews = self.db.get_preview_page(self.current_page, self.cards_per_page, self.tags_query, self.sources)
+        self.total_items = self.db.count_preview_results(self.tags_query, self.sources)
+        self.total_pages = self.total_items // self.cards_per_page + (1 if self.total_items % self.cards_per_page > 0 else 0)
         print(f"Total de items: {self.total_items}, Páginas totales: {self.total_pages}")
-        # recargar la vista central
-        self.reload_central_view(self.current_card_size)
+        self.reload_central_view()
 
-    def reload_central_view(self, card_size=None):
-        if card_size is None:
-            card_size = self.current_card_size
+    def on_page_change(self, new_page):
+        self.current_page = new_page or 1
+        self.previews = self.db.get_preview_page(self.current_page, self.cards_per_page, self.tags_query, self.sources)
+        self.card_size = self._get_setting("card_size") or 150
+        self.reload_central_view()
+
+    def handle_missing_previews(self,missing):
+        print("Faltan previews:", len(missing))
+        for path, booru_id, source in missing:
+            print(f"- {booru_id}: {path} ({source})")
+
+    def reload_central_view(self):
         if self.current_view == "grid":
             widget = create_grid_view(
                 self.previews,
-                card_size,
-                self._on_card_size_change
+                self.card_size,
+                self.current_page,
+                self.total_pages,
+                self.on_page_change,
+                self.handle_missing_previews
             )
         else:
-            widget = create_list_view(self.previews)
+            widget = create_list_view(
+                self.previews, 
+                self.current_page, 
+                self.total_pages,
+                self.on_page_change,
+                self.handle_missing_previews
+            )
         self.setCentralWidget(widget)
 
-    def switch_view(self, view_type, card_size=None):
-        if card_size is None:
-            card_size = self.current_card_size
-        if view_type != self.current_view or card_size != self.current_card_size:
+    def switch_view(self, view_type):
+        if view_type != self.current_view:
             self.current_view = view_type
-            self.current_card_size = card_size
-            self.reload_central_view(card_size)
+            self.reload_central_view()
 
     # def load_previews_from_db(self):
     #     db_path = "data/gallery.db"
@@ -316,9 +329,9 @@ class MainWindow(QMainWindow):
             dock.setVisible(checked)
             self._save_config(config_key, checked)
     
-    def _on_card_size_change(self, new_size):
-        self.current_card_size = new_size
-        self._save_config("card_size", new_size)
+    # def _on_card_size_change(self, new_size):
+    #     self.current_card_size = new_size
+    #     self._save_config("card_size", new_size)
 
     def _save_config(self, key, value):
         if key is None:
